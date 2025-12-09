@@ -15,10 +15,16 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:%s@localhost/oufoo
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 app.config["PAGE_SIZE"] = 8
 
-app.config['VNPAY_RETURN_URL'] = os.environ.get('VNPAY_RETURN_URL')
-app.config['VNPAY_PAYMENT_URL'] = os.environ.get('VNPAY_PAYMENT_URL')
-app.config['VNPAY_TMN_CODE'] = os.environ.get('VNPAY_TMN_CODE')
-app.config['VNPAY_HASH_SECRET_KEY'] = os.environ.get('VNPAY_HASH_SECRET_KEY')
+# app.config['VNPAY_RETURN_URL'] = os.environ.get('VNPAY_RETURN_URL')
+# app.config['VNPAY_PAYMENT_URL'] = os.environ.get('VNPAY_PAYMENT_URL')
+# app.config['VNPAY_TMN_CODE'] = os.environ.get('VNPAY_TMN_CODE')
+# app.config['VNPAY_HASH_SECRET_KEY'] = os.environ.get('VNPAY_HASH_SECRET_KEY')
+
+app.config["VNPAY_TMN_CODE"] = "PRGWN1DK"
+app.config["VNPAY_HASH_SECRET_KEY"] = "9R0EULLFYS4PPLP9QJVESN08J83EQ8HU"
+app.config["VNPAY_PAYMENT_URL"] = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+app.config["VNPAY_RETURN_URL"] = "http://localhost:8000/vnpay_payment_return"
+
 
 app.config['MOMO_RETURN_URL'] = os.environ.get('MOMO_RETURN_URL')
 app.config['MOMO_PAYMENT_URL'] = os.environ.get('MOMO_PAYMENT_URL')

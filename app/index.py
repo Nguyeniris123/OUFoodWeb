@@ -7,7 +7,7 @@ from app import app, login, dao, google, admin, utils, decorators, db, momo
 from flask import render_template, redirect, flash, request, url_for, session, jsonify
 from datetime import datetime
 from app.vnpay import vnpay
-from models import Restaurant, CuisineType, Role, Cuisine, Review
+from models import Restaurant, CuisineType, Role, Cuisine, Review, Tenant, Subscription
 from dao import add_user
 import uuid
 
@@ -589,11 +589,33 @@ def rate_restaurant():
     return jsonify({'result': "true"})
 
 
-#Sử lý saas
-@app.route("/manager/packages")
-def packages():
+@app.route('/manager/packages')
+def package_info():
     plan_packages = dao.get_packages()
-    return render_template("packages.html", packages=plan_packages)
+    tenant = Tenant.query.filter_by(user_id=current_user.id).first()
+
+    if not tenant:
+        return "Không tìm thấy tenant!", 404
+
+    subscription = Subscription.query.filter(
+        Subscription.tenant_id == tenant.id,
+        Subscription.status == "active",
+        Subscription.end_date >= datetime.now()
+    ).first()
+
+    if not subscription:
+        return render_template("manager/package/no_package.html")
+
+    plan = subscription.plan
+
+    return render_template(
+        "packages.html",
+        packages=plan_packages,
+        plan=plan,
+        subscription=subscription,
+        now=datetime.now()
+    )
+
 
 if __name__ == "__main__":
     app.run(host="localhost", port=8000, debug=True)
