@@ -5,9 +5,9 @@ from flask_login import logout_user, login_user, current_user, login_required
 from sqlalchemy import func
 from app import app, login, dao, google, admin, utils, decorators, db, momo
 from flask import render_template, redirect, flash, request, url_for, session, jsonify
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.vnpay import vnpay
-from models import Restaurant, CuisineType, Role, Cuisine, Review, Tenant, Subscription
+from models import Restaurant, CuisineType, Role, Cuisine, Review, SaasPayment, Plan, Subscription, Tenant
 from dao import add_user
 import uuid
 
@@ -615,6 +615,126 @@ def package_info():
         subscription=subscription,
         now=datetime.now()
     )
+
+MANAGER_RETURN_URL = "http://localhost:8000/manager/payment/vnpay_return"
+
+@app.route('/manager/payment/vnpay/<int:package_id>')
+@decorators.manager_required
+def manager_payment_vnpay(package_id):
+    # Lấy thông tin Gói và Tenant
+    plan = Plan.query.get_or_404(package_id)
+    tenant = Tenant.query.filter_by(user_id=current_user.id).first()
+
+    if not tenant:
+        flash("Bạn chưa đăng ký thông tin nhà hàng!", "danger")
+        return redirect("/infor/restaurant")
+
+    # Tạo Subscription ở trạng thái 'pending'
+    # Tạo trước để lấy ID, nếu thanh toán thất bại thì record này sẽ giữ status pending
+    new_sub = Subscription(
+        tenant_id=tenant.id,
+        plan_id=plan.id,
+        status='pending',
+        end_date=datetime.now()  # update khi thành công
+    )
+    db.session.add(new_sub)
+    db.session.flush()  # flush để lấy new_sub.id ngay lập tức
+
+    # Tạo mã giao dịch (TxnRef) duy nhất
+    # SAAS_{subscription_id}_{timestamp} để dễ dàng truy xuất lại khi VNPay trả về
+    order_id = f"SAAS_{new_sub.id}_{int(datetime.now().timestamp())}"
+
+    # Lưu thông tin thanh toán (SaasPayment)
+    new_payment = SaasPayment(
+        payment_method="VNPay",
+        payment_amount=plan.price,
+        status=False,  # Chưa thanh toán
+        subscription_id=new_sub.id
+    )
+    db.session.add(new_payment)
+    db.session.commit()
+
+    # Cấu hình VNPay
+    vnp = vnpay()
+    vnp.requestData['vnp_Version'] = '2.1.0'
+    vnp.requestData['vnp_Command'] = 'pay'
+    vnp.requestData['vnp_TmnCode'] = app.config['VNPAY_TMN_CODE']
+    vnp.requestData['vnp_Amount'] = int(plan.price * 100)
+    vnp.requestData['vnp_CurrCode'] = 'VND'
+    vnp.requestData['vnp_TxnRef'] = order_id
+    vnp.requestData['vnp_OrderInfo'] = f"Thanh toan goi {plan.name} cho nha hang"
+    vnp.requestData['vnp_OrderType'] = 'other'
+    vnp.requestData['vnp_Locale'] = 'vn'
+    vnp.requestData['vnp_CreateDate'] = datetime.now().strftime('%Y%m%d%H%M%S')
+    vnp.requestData['vnp_IpAddr'] = get_client_ip(request)
+    vnp.requestData['vnp_ReturnUrl'] = MANAGER_RETURN_URL
+
+    vnpay_payment_url = vnp.get_payment_url(app.config['VNPAY_PAYMENT_URL'], app.config['VNPAY_HASH_SECRET_KEY'])
+    return redirect(vnpay_payment_url)
+
+
+@app.route('/manager/payment/vnpay_return')
+@decorators.manager_required
+def manager_payment_return():
+    inputData = request.args
+    if inputData:
+        vnp = vnpay()
+        vnp.responseData = dict(inputData)
+
+        order_id = inputData.get('vnp_TxnRef')  # SAAS_{sub_id}_{timestamp}
+        amount = int(inputData.get('vnp_Amount')) / 100
+        vnp_ResponseCode = inputData.get('vnp_ResponseCode')
+
+        if vnp.validate_response(app.config['VNPAY_HASH_SECRET_KEY']):
+            # Lấy subscription_id từ order_id (TxnRef)
+            try:
+                parts = order_id.split('_')
+                if len(parts) >= 2 and parts[0] == 'SAAS':
+                    sub_id = int(parts[1])
+                else:
+                    raise ValueError("Invalid Order ID format")
+            except:
+                return "Lỗi định dạng mã giao dịch", 400
+
+            if vnp_ResponseCode == '00':
+                # THANH TOÁN THÀNH CÔNG
+                # Tìm Subscription và Payment
+                subscription = db.session.get(Subscription, sub_id)
+                payment = SaasPayment.query.filter_by(subscription_id=sub_id).first()
+
+                if subscription and payment:
+                    plan = db.session.get(Plan, subscription.plan_id)
+
+                    # 2. Hủy các gói cũ đang active của Tenant này
+                    old_active_subs = Subscription.query.filter(
+                        Subscription.tenant_id == subscription.tenant_id,
+                        Subscription.status == 'active',
+                        Subscription.id != subscription.id
+                    ).all()
+
+                    for old_sub in old_active_subs:
+                        old_sub.status = 'expired'
+
+                    # Kích hoạt gói mới
+                    subscription.status = 'active'
+                    # Tính ngày hết hạn: Thời gian hiện tại + số ngày của gói
+                    subscription.end_date = datetime.now() + timedelta(days=plan.time)
+
+                    # Cập nhật trạng thái thanh toán
+                    payment.status = True
+
+                    db.session.commit()
+
+                    flash(f"Nâng cấp gói {plan.name} thành công!", "success")
+                    return redirect("/manager/packages")
+            else:
+                # THANH TOÁN THẤT BẠI/HỦY
+                flash("Giao dịch bị hủy hoặc thất bại", "danger")
+                return redirect("/manager/packages")
+        else:
+            return "Sai Checksum - Dữ liệu không hợp lệ"
+
+    return redirect("/manager/packages")
 
 
 if __name__ == "__main__":

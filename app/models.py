@@ -389,8 +389,8 @@ if __name__ == '__main__':
         #Tạo Plan
         plan1 = Plan(name="Free", description="Gói free cho phép người dùng sử dụng thử trong vòng 30 ngày và cho được phép thêm tối đa 3 món ăn", price=0, max_food=3)
         plan2 = Plan(name="Basic", description="Gói Basic cho phép người dùng sử dụng trong vòng 30 ngày và cho được phép thêm tối đa 5 món ăn", price=100000, max_food=5)
-        plan3 = Plan(name="Pro", description="Gói free cho phép người dùng sử dụng thử trong vòng 90 ngày và cho được phép thêm tối đa 10 món ăn", price=300000, max_food=10)
-        plan4 = Plan(name="Vip", description="Gói free cho phép người dùng sử dụng thử trong vòng 180 ngày và cho được phép thêm tối đa 50 món ăn", price=500000, max_food=50)
+        plan3 = Plan(name="Pro", description="Gói Pro cho phép người dùng sử dụng thử trong vòng 90 ngày và cho được phép thêm tối đa 10 món ăn", price=300000, max_food=10)
+        plan4 = Plan(name="Vip", description="Gói Vip cho phép người dùng sử dụng thử trong vòng 180 ngày và cho được phép thêm tối đa 50 món ăn", price=500000, max_food=50)
         db.session.add_all([plan1, plan2, plan3, plan4])
 
         db.session.commit()
