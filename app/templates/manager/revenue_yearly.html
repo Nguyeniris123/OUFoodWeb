@@ -1,0 +1,86 @@
+{% extends 'manager/layout/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3">Doanh thu theo năm</h2>
+     <!-- TAB -->
+    <div class="mb-4">
+        <a href="{{ url_for('revenue_weekly') }}" class="btn btn-outline-primary">Theo tuần</a>
+        <a href="{{ url_for('revenue_monthly') }}" class="btn btn-primary">Theo tháng</a>
+        <a href="{{ url_for('revenue_yearly') }}" class="btn btn-outline-primary">Theo năm</a>
+    </div>
+
+    <!-- FORM CHỌN NĂM -->
+    <form method="get" action="{{ url_for('revenue_yearly') }}" class="row g-2 mb-4">
+        <div class="col-auto">
+            <input
+                type="number"
+                name="year"
+                class="form-control"
+                value="{{ selected_year }}"
+                min="2000"
+                max="2100"
+            >
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-success">
+                Xem
+            </button>
+        </div>
+    </form>
+
+
+
+    <!-- BIỂU ĐỒ -->
+    <div style="height: 420px;">
+        <canvas id="yearlyChart"></canvas>
+    </div>
+</div>
+
+<!-- CHART JS (ĐẶT TRỰC TIẾP, KHÔNG BLOCK) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const labels = {{ labels | tojson }};
+    const dataValues = {{ data | tojson }};
+
+    const ctx = document.getElementById('yearlyChart').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Doanh thu (VND)',
+                data: dataValues,
+                backgroundColor: '#4CAF50',
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    suggestedMax: Math.max(...dataValues) * 1.2 || 100000,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString('vi-VN') + ' ₫';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.raw.toLocaleString('vi-VN') + ' ₫';
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

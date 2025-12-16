@@ -360,3 +360,154 @@ def add_infor_restaurant(name, type, location, introduce, categories, owner_rest
 
 def get_restaurant_id(user_id):
     return db.session.query(Restaurant.id).filter(Restaurant.user_id == user_id).first()
+
+# ===== TỔNG DOANH THU THEO TENANT =====
+def revenue_total_by_tenant():
+    return db.session.query(
+        User.name.label("tenant"),
+        func.sum(func.distinct(Payment.total)).label("revenue")
+    ).select_from(Payment) \
+     .join(Order, Payment.order_id == Order.id) \
+     .join(OrderDetail, OrderDetail.order_id == Order.id) \
+     .join(Cuisine, Cuisine.id == OrderDetail.cuisine_id) \
+     .join(CuisineType, CuisineType.id == Cuisine.cuisine_type_id) \
+     .join(Restaurant, Restaurant.id == CuisineType.restaurant_id) \
+     .join(User, User.id == Restaurant.user_id) \
+     .join(Tenant, Tenant.user_id == User.id) \
+     .filter(Payment.status == PaymentStatus.PAID) \
+     .group_by(User.name) \
+     .all()
+
+
+from sqlalchemy import extract
+#  TUẦN (THEO NGÀY TRONG TUẦN)
+def get_weekly_revenue(year, week, tenant_user_id):
+    sub = (
+        db.session.query(
+            Payment.id,
+            Payment.total,
+            func.date(Payment.created_date).label("date")
+        )
+        .join(Order, Payment.order_id == Order.id)
+        .join(OrderDetail, OrderDetail.order_id == Order.id)
+        .join(Cuisine, Cuisine.id == OrderDetail.cuisine_id)
+        .join(CuisineType, CuisineType.id == Cuisine.cuisine_type_id)
+        .join(Restaurant, Restaurant.id == CuisineType.restaurant_id)
+        .filter(
+            extract("year", Payment.created_date) == year,
+            func.week(Payment.created_date, 1) == week,
+            Payment.status == PaymentStatus.PAID,
+            Restaurant.user_id == tenant_user_id
+        )
+        .distinct(Payment.id)
+        .subquery()
+    )
+
+    return (
+        db.session.query(
+            sub.c.date,
+            func.sum(sub.c.total).label("total")
+        )
+        .group_by(sub.c.date)
+        .order_by(sub.c.date)
+        .all()
+    )
+
+
+# THÁNG (THEO TUẦN TRONG THÁNG)
+def get_monthly_revenue(year, month, tenant_user_id):
+    sub = (
+        db.session.query(
+            Payment.id,
+            Payment.total,
+            func.week(Payment.created_date, 1).label("week")
+        )
+        .join(Order, Payment.order_id == Order.id)
+        .join(OrderDetail, OrderDetail.order_id == Order.id)
+        .join(Cuisine, Cuisine.id == OrderDetail.cuisine_id)
+        .join(CuisineType, CuisineType.id == Cuisine.cuisine_type_id)
+        .join(Restaurant, Restaurant.id == CuisineType.restaurant_id)
+        .filter(
+            extract("year", Payment.created_date) == year,
+            extract("month", Payment.created_date) == month,
+            Payment.status == PaymentStatus.PAID,
+            Restaurant.user_id == tenant_user_id
+        )
+        .distinct(Payment.id)
+        .subquery()
+    )
+
+    results = (
+        db.session.query(
+            sub.c.week,
+            func.sum(sub.c.total).label("total")
+        )
+        .group_by(sub.c.week)
+        .order_by(sub.c.week)
+        .all()
+    )
+
+    labels = [f"Tuần {r.week}" for r in results]
+    data = [float(r.total or 0) for r in results]
+    return labels, data
+
+
+# NĂM (THEO THÁNG)
+def get_yearly_revenue(year, tenant_user_id):
+    sub = (
+        db.session.query(
+            Payment.id,
+            Payment.total,
+            Payment.created_date
+        )
+        .join(Order, Payment.order_id == Order.id)
+        .join(OrderDetail, OrderDetail.order_id == Order.id)
+        .join(Cuisine, Cuisine.id == OrderDetail.cuisine_id)
+        .join(CuisineType, CuisineType.id == Cuisine.cuisine_type_id)
+        .join(Restaurant, Restaurant.id == CuisineType.restaurant_id)
+        .filter(
+            extract("year", Payment.created_date) == year,
+            Payment.status == PaymentStatus.PAID,
+            Restaurant.user_id == tenant_user_id
+        )
+        .distinct(Payment.id)
+        .subquery()
+    )
+
+    results = (
+        db.session.query(
+            extract("month", sub.c.created_date).label("month"),
+            func.sum(sub.c.total).label("total")
+        )
+        .group_by(extract("month", sub.c.created_date))
+        .order_by(extract("month", sub.c.created_date))
+        .all()
+    )
+
+    revenue = {m: 0 for m in range(1, 13)}
+    for r in results:
+        revenue[int(r.month)] = float(r.total)
+
+    labels = [f"Tháng {m}" for m in range(1, 13)]
+    data = [revenue[m] for m in range(1, 13)]
+    return labels, data
+#Lấy plan hiện tại
+def get_current_plan(tenant_user_id):
+    return (
+        db.session.query(Plan)
+        .join(Subscription, Subscription.plan_id == Plan.id)
+        .join(Tenant, Tenant.id == Subscription.tenant_id)
+        .filter(
+            Tenant.user_id == tenant_user_id,
+            Subscription.status == 'ACTIVE'
+        )
+        .first()
+    )
+# Dem so luong mon an cua nha hang
+def count_cuisine_by_restaurant(restaurant_id):
+    return (
+        db.session.query(func.count(Cuisine.id))
+        .join(CuisineType, Cuisine.cuisine_type_id == CuisineType.id)
+        .filter(CuisineType.restaurant_id == restaurant_id)
+        .scalar()
+    )
