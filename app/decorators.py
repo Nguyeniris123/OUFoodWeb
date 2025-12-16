@@ -1,7 +1,7 @@
 from functools import wraps
 from flask_login import current_user
 from flask import redirect, abort
-from models import Role
+from app.models import Role
 from flask_login import login_required
 
 

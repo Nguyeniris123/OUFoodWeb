@@ -2,7 +2,7 @@ import sys
 sys.path.append(r"C:\ProgramData\Jenkins\.jenkins\workspace\OUFood\app")
 
 import unittest
-from app import dao, app
+from food import dao, app
 
 class TestLogin(unittest.TestCase):
     def test_1(self):

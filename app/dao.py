@@ -4,7 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from datetime import  datetime, timedelta
 from app import app, db
 
-from models import User, Order, Payment, OrderDetail, Cuisine, OrderStatus, Restaurant, CuisineType, Review, \
+from app.models import User, Order, Payment, OrderDetail, Cuisine, OrderStatus, Restaurant, CuisineType, Review, \
     PaymentStatus, Plan, Tenant, Subscription, SaasPayment
 from sqlalchemy import func, DateTime
 

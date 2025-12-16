@@ -7,10 +7,9 @@ from app import app, login, dao, google, admin, utils, decorators, db, momo
 from flask import render_template, redirect, flash, request, url_for, session, jsonify
 from datetime import datetime, timedelta
 from app.vnpay import vnpay
-from models import Restaurant, CuisineType, Role, Cuisine, Review, SaasPayment, Plan, Subscription, Tenant
-from dao import add_user
+from app.models import Restaurant, CuisineType, Role, Cuisine, Review, SaasPayment, Plan, Subscription, Tenant
+from app.dao import add_user
 import uuid
-
 
 @app.errorhandler(401)
 def error_401(error):
@@ -736,6 +735,20 @@ def manager_payment_return():
 
     return redirect("/manager/packages")
 
+@app.route('/health')
+def health():
+    try:
+        # Test database connection
+        db.session.execute('SELECT 1')
+        db_status = 'connected'
+    except Exception as e:
+        db_status = f'error: {str(e)}'
+
+    return {
+        'status': 'healthy',
+        'app': 'OUFoodWeb',
+        'database': db_status
+    }, 200
 
 if __name__ == "__main__":
-    app.run(host="localhost", port=8000, debug=True)
+    app.run(host="0.0.0.0", port=8000, debug=True)

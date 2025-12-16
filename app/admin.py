@@ -5,7 +5,7 @@ from flask_admin.contrib.sqla import ModelView
 from flask_login import current_user, logout_user
 from app import app, db, decorators
 from sqlalchemy import func
-from models import *
+from app.models import *
 
 # Trang chủ admin
 class MyAdminIndexView(AdminIndexView):
