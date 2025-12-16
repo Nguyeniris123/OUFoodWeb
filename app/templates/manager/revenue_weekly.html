@@ -1,0 +1,59 @@
+{% extends 'manager/layout/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Doanh thu theo tuần</h2>
+
+    <!-- TAB -->
+    <div class="mb-4">
+        <a href="{{ url_for('revenue_weekly') }}" class="btn btn-primary">Theo tuần</a>
+        <a href="{{ url_for('revenue_monthly') }}" class="btn btn-outline-primary">Theo tháng</a>
+        <a href="{{ url_for('revenue_yearly') }}" class="btn btn-outline-primary">Theo năm</a>
+    </div>
+
+    <!-- FORM -->
+    <form method="get" class="row g-2 mb-4">
+        <div class="col-auto">
+            <input type="number" name="week" class="form-control" value="{{ week }}" min="1" max="53">
+        </div>
+        <div class="col-auto">
+            <input type="number" name="year" class="form-control" value="{{ year }}">
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-success">Xem</button>
+        </div>
+    </form>
+
+    <div style="height:400px">
+        <canvas id="weeklyChart"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const labels = {{ data | map(attribute='date') | list | tojson }};
+const values = {{ data | map(attribute='total') | list | tojson }};
+
+new Chart(document.getElementById('weeklyChart'), {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Doanh thu (VND)',
+            data: values,
+            backgroundColor: '#0d6efd'
+        }]
+    },
+    options: {
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: v => v.toLocaleString('vi-VN') + ' ₫'
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

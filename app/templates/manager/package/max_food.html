@@ -119,29 +119,8 @@
         {% endwith %}
     </div>
     <div class="container">
-        <h3 class="text-center mb-4">Gói hiện tại của bạn</h3>
-
-        <div class="d-flex justify-content-center">
-            <div class="card p-4 shadow-sm" style="max-width: 500px; width: 100%;">
-
-                <h4>{{ plan.name }}</h4>
-                <p>{{ plan.description }}</p>
-
-                <hr>
-
-                <p><b>Giá:</b> {{ "{:,.0f}".format(plan.price) }} VND / {{ plan.time }} ngày</p>
-                <p><b>Số lượng món tối đa:</b> {{ plan.max_food }}</p>
-                <p><b>Ngày hết hạn:</b> {{ subscription.end_date.strftime("%d/%m/%Y") }}</p>
-
-                {% if is_expired %}
-                    <span class="badge bg-danger">Đã hết hạn</span>
-                {% else %}
-                    <span class="badge bg-success">Còn hạn</span>
-                {% endif %}
-
-                <hr>
-            </div>
-        </div>
+       <h3 class="text-muted">Bạn đã tạo vượt quá số lượng cho phép </h3>
+                <p>Vui lòng chọn một gói dịch vụ bên dưới để sử dụng hệ thống.</p>
     </div>
 
     <h3 class="text-center mt-5">Các gói dịch vụ khác</h3>
