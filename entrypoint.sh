@@ -10,7 +10,7 @@ import sys
 import pymysql
 import os
 
-max_retries = 60
+max_retries = 10
 retry_count = 0
 
 while retry_count < max_retries:
@@ -20,7 +20,8 @@ while retry_count < max_retries:
             user=os.getenv('DB_USER'),
             password=os.getenv('DB_PASSWORD'),
             database=os.getenv('DB_NAME'),
-            connect_timeout=15
+            port=int(os.getenv('DB_PORT', 3306)),
+            connect_timeout=5
         )
         conn.close()
         print("✓ MySQL is up and running!")
@@ -28,6 +29,8 @@ while retry_count < max_retries:
     except Exception as e:
         retry_count += 1
         print(f"MySQL is unavailable (attempt {retry_count}/{max_retries}) - {str(e)}")
+        print(os.getenv('DB_HOST'))
+        print(os.getenv('DB_NAME'))
         time.sleep(2)
 
 print("Failed to connect to MySQL after maximum retries")

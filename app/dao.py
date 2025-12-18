@@ -321,7 +321,8 @@ def add_tenant(user_id, plan_id):
     subscription = Subscription(
         plan_id = plan_id,
         tenant_id = tenant.id,
-        end_date = datetime.now() + timedelta(days=number_days)
+        end_date = datetime.now() + timedelta(days=number_days),
+        status = "active"
     )
     db.session.add(subscription)
     db.session.commit()

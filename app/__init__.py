@@ -19,7 +19,7 @@ DB_NAME = os.getenv("DB_NAME")
 
 app = Flask(__name__)
 app.secret_key = 'nhom6@321'
-#app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:%s@localhost/oufooddb?charset=utf8mb4" % quote("Admin@123")
+#app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://flaskuser:%s@localhost/oufooddb?charset=utf8mb4" % quote("123456")
 #app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://thanhdan:%s@mysql/oufooddb?charset=utf8mb4" % quote("123456")
 app.config["SQLALCHEMY_DATABASE_URI"] = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}"f"@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
 

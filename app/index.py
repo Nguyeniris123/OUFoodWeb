@@ -591,6 +591,7 @@ def rate_restaurant():
 @app.route('/manager/packages')
 def package_info():
     plan_packages = dao.get_packages()
+    print(plan_packages)
     tenant = Tenant.query.filter_by(user_id=current_user.id).first()
 
     if not tenant:
@@ -602,8 +603,9 @@ def package_info():
         Subscription.end_date >= datetime.now()
     ).first()
 
+    print(subscription)
     if not subscription:
-        return render_template("manager/package/no_package.html")
+        return render_template("manager/package/no_package.html", packages=plan_packages)
 
     plan = subscription.plan
 
@@ -734,6 +736,61 @@ def manager_payment_return():
             return "Sai Checksum - Dữ liệu không hợp lệ"
 
     return redirect("/manager/packages")
+
+# TUẦN
+@app.route("/manager/revenue_weekly")
+def revenue_weekly():
+    year = request.args.get("year", type=int)
+    week = request.args.get("week", type=int)
+
+    if not year or not week:
+        today = datetime.now()
+        iso = today.isocalendar()
+        year, week = iso[0], iso[1]
+
+    result = dao.get_weekly_revenue(year, week,tenant_user_id=current_user.id)
+
+    monday = datetime.strptime(f"{year}-W{week}-1", "%G-W%V-%u")
+    data = []
+
+    for i in range(7):
+        day = monday + timedelta(days=i)
+        found = next((r.total for r in result if r.date == day.date()), 0)
+        data.append({"date": day.strftime("%d/%m/%Y"), "total": found})
+
+    return render_template("manager/revenue_weekly.html", data=data, year=year, week=week)
+
+# THÁNG
+@app.route("/manager/revenue_monthly")
+def revenue_monthly():
+    year = request.args.get("year", datetime.now().year, type=int)
+    month = request.args.get("month", datetime.now().month, type=int)
+
+    labels, data = dao.get_monthly_revenue(year, month, tenant_user_id=current_user.id)
+
+    return render_template(
+        "manager/revenue_monthly.html",
+        labels=labels,
+        data=data,
+        selected_year=year,
+        selected_month=month
+    )
+
+#  NĂM
+@app.route("/manager/revenue_yearly")
+def revenue_yearly():
+    year = request.args.get("year", datetime.now().year, type=int)
+
+    labels, data = dao.get_yearly_revenue(year,tenant_user_id=current_user.id )
+
+    print(data)
+
+    return render_template(
+        "manager/revenue_yearly.html",
+        labels=labels,
+        data=data,
+        selected_year=year
+    )
 
 @app.route('/health')
 def health():
