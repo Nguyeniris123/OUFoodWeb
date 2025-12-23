@@ -530,25 +530,57 @@ def cuisine_delete():
     return jsonify({"result": result})
 
 
-@app.route("/manager/add/cuisine/<restaurant_id>", methods=['POST', 'GET'])
+@app.route("/manager/add/cuisine/<int:restaurant_id>", methods=['GET', 'POST'])
 @decorators.manager_required
 def cuisine_add(restaurant_id):
+    plan_packages = dao.get_packages()
     err_msg = None
+
     cuisines_type = dao.get_cuisine_type(restaurant_id)
-    print(restaurant_id[0])
+
+    #LẤY PLAN HIỆN TẠI
+    plan = dao.get_current_plan(current_user.id)
+
+    if not plan:
+        return render_template("manager/package/no_package.html",packages=plan_packages)
+
+    #ĐẾM SỐ MÓN
+    current_food_count = dao.count_cuisine_by_restaurant(restaurant_id)
+
+    # VƯỢT GÓI
+    if current_food_count >= plan.max_food:
+        return render_template("manager/package/max_food.html",packages=plan_packages)
+
     if request.method == "POST":
         cuisine_name = request.form.get("name")
         cuisine_description = request.form.get("description")
         cuisine_price = request.form.get("price")
         cuisine_type = request.form.get("cuisine_type")
         cuisine_avatar = request.files.get("cuisine_avatar")
-        if cuisine_name is None or cuisine_description is None or cuisine_price is None or cuisine_type is None or cuisine_avatar is None:
-            print("Hello")
-            err_msg = "vui lòng điền đầy đủ thông tin món ăn"
-            return render_template("manager/cuisine_add.html", cuisines_type=cuisines_type, err_msg=err_msg)
-        dao.cuisine_add(cuisine_name, cuisine_price, cuisine_avatar, cuisine_description, cuisine_type)
+
+        if not all([cuisine_name, cuisine_description, cuisine_price, cuisine_type, cuisine_avatar]):
+            err_msg = "Vui lòng điền đầy đủ thông tin món ăn"
+            return render_template(
+                "manager/cuisine_add.html",
+                cuisines_type=cuisines_type,
+                err_msg=err_msg
+            )
+
+        dao.cuisine_add(
+            cuisine_name,
+            cuisine_price,
+            cuisine_avatar,
+            cuisine_description,
+            cuisine_type
+        )
+
         return redirect("/manager/cuisine/manager")
-    return render_template("manager/cuisine_add.html", cuisines_type=cuisines_type, restaurant_id=restaurant_id)
+
+    return render_template(
+        "manager/cuisine_add.html",
+        cuisines_type=cuisines_type,
+        restaurant_id=restaurant_id
+    )
 
 
 @app.route("/api/update/quantity", methods=['PUT'])
@@ -617,7 +649,7 @@ def package_info():
         now=datetime.now()
     )
 
-MANAGER_RETURN_URL = "http://localhost:8000/manager/payment/vnpay_return"
+MANAGER_RETURN_URL = "http://ou-food-load-blancer-737018952.us-east-1.elb.amazonaws.com/manager/payment/vnpay_return"
 
 @app.route('/manager/payment/vnpay/<int:package_id>')
 @decorators.manager_required

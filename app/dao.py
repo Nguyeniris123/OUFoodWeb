@@ -340,7 +340,7 @@ def add_infor_restaurant(name, type, location, introduce, categories, owner_rest
 
     if avatar:
         res = cloudinary.uploader.upload(avatar)
-        restaurant.avatar = res.get('secure_url')
+        restaurant.image = res.get('secure_url')
 
     if restaurant:
 
